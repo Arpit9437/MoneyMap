@@ -3,6 +3,9 @@ import { useLoaderData } from "react-router-dom";
 
 // library
 import { toast } from "react-toastify";
+import { useRef } from 'react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 // components
 import AddExpenseForm from "../components/AddExpenseForm";
@@ -66,6 +69,24 @@ export async function budgetAction({ request }) {
 
 const BudgetPage = () => {
   const { budget, expenses } = useLoaderData();
+  const pdfRef = useRef(null);
+
+  const downloadPDF = () => {
+    const input = pdfRef.current;
+    html2canvas(input, { useCORS: true }).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const pdf = new jsPDF('p', 'mm', 'a4', true);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 30;
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.save('Budget Summary.pdf');
+    });
+  };
 
   return (
     <div
@@ -82,12 +103,16 @@ const BudgetPage = () => {
         <AddExpenseForm budgets={[budget]} />
       </div>
       {expenses && expenses.length > 0 && (
-        <div className="grid-md">
+        <div >
+          <div className="grid-md" ref={pdfRef}>
           <h2>
             <span className="accent">{budget.name}</span> Expenses
           </h2>
           <Table expenses={expenses} showBudget={false} />
+          </div>
+          <button className="btn" onClick={downloadPDF}>Download PDF</button>
         </div>
+        
       )}
     </div>
   );
